@@ -21,7 +21,7 @@ export async function POST(req: Request): Promise<Response> {
         // Find user by email
         const user = await User.findOne({ email });
         if (!user) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
+            return NextResponse.json({ error: "User does not exist" }, { status: 400 });
         }
 
         // Compare password
@@ -29,13 +29,18 @@ export async function POST(req: Request): Promise<Response> {
         if (!isMatch) {
             return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
         }
+        const tokenData = { id: user._id, email: user.email }; 
 
         // Generate JWT Token
-        const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET as string, {
+        const token = jwt.sign( tokenData, process.env.JWT_SECRET as string, {
             expiresIn: "1h",
         });
+        const response = NextResponse.json({ message: "Login successful", token, success: true });
 
-        return NextResponse.json({ message: "Login successful", token, success: true });
+        response.cookies.set("token", token, {
+            httpOnly: true,
+        })
+        return response;
     } catch (err: any) {
         console.error("Login Error:", err);
         return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
